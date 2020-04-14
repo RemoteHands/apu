@@ -2,7 +2,7 @@
 export HOSTNAME=$(cat /etc/hostname)
 SCRIPT_PATH=$(readlink -f "$0")
 export BASEDIR=$(dirname "$SCRIPT_PATH")
-. $BASEDIR/vars
+. $BASEDIR/config
 
 #apt-get install -y libqmi-utils udhcpc bird
 

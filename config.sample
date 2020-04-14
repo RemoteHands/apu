@@ -1,0 +1,18 @@
+# IPv4 addresses of VPN endpoints
+export VPN_PRIMARY=
+export VPN_SECONDARY=
+export OPENVPN_PORT=11195
+
+# Network Interfaces
+export ALIAS_MOBILE=vpn-primary
+export ALIAS_WIRED=vpn-secondary
+export NIC_MOBILE=wwp0s19u1u3i8
+export NIC_WIRED=enp1s0
+
+# Bird configuration
+export BIRD_LOCAL_IP=192.168.254.2
+export BIRD_REMOTE_IP=192.168.254.1
+
+# Mobile Internet
+export APN=internet.t-mobile
+

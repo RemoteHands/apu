@@ -1,0 +1,27 @@
+auto lo lo:1
+iface lo inet loopback
+
+iface lo:1 inet static
+  address ${BIRD_LOCAL_IP}/32
+
+auto enp1s0
+allow-hotplug enp1s0
+iface enp1s0 inet manual
+    pre-up ${BASEDIR}/post-down.sh ${ALIAS_WIRED} enp1s0
+    post-up udhcpc -i enp1s0 --script=${BASEDIR}/udhcpc.script
+    post-down ${BASEDIR}/post-down.sh ${ALIAS_WIRED} enp1s0
+
+auto wwp0s19u1u3i8
+allow-hotplug wwp0s19u1u3i8
+iface wwp0s19u1u3i8 inet manual
+    pre-up ${BASEDIR}/pre-up.sh ${ALIAS_MOBILE} wwp0s19u1u3i8
+    pre-up ifconfig wwp0s19u1u3i8 down
+    pre-up ifconfig wwp0s19u1u3i10 down # only needed if the modem presents two wwan interfaces
+    pre-up for _ in $(seq 1 10); do /usr/bin/test -c /dev/cdc-wdm0 && break; /bin/sleep 1; done
+    pre-up for _ in $(seq 1 10); do /usr/bin/qmicli -d /dev/cdc-wdm0 --nas-get-signal-strength && break; /bin/sleep 1; done
+    pre-up echo Y > /sys/class/net/wwp0s19u1u3i8/qmi/raw_ip
+    pre-up /usr/bin/qmi-network /dev/cdc-wdm0 start
+    pre-up udhcpc -i wwp0s19u1u3i8 --script=${BASEDIR}/udhcpc.script
+    pre-down ${BASEDIR}/post-down.sh ${ALIAS_MOBILE} wwp0s19u1u3i8
+    post-down /usr/bin/qmi-network /dev/cdc-wdm0 stop
+

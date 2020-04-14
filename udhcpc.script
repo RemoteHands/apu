@@ -1,0 +1,63 @@
+#!/bin/sh
+# Busybox udhcpc dispatcher script.
+# Copyright (C) 2009 by Axel Beckert.
+# Copyright (C) 2014 by Michael Tokarev.
+#
+# Based on the busybox example scripts and the old udhcp source
+# package default.* scripts.
+
+VPN_PRIMARY=$(getent ahostsv4 vpn-primary | head -n1 | cut -d" " -f1)
+VPN_SECONDARY=$(getent ahostsv4 vpn-secondary | head -n1 | cut -d" " -f1)
+NIC_ALIAS="$(ip link show $interface | grep alias | cut -d' ' -f6-)"
+
+log() {
+    logger -t "udhcpc[$PPID]" -p daemon.$1 "$interface: $2"
+}
+
+case $1 in
+    bound|renew)
+
+	busybox ifconfig $interface ${mtu:+mtu $mtu} \
+	    $ip netmask $subnet ${broadcast:+broadcast $broadcast}
+
+	router="${router%% *}" # linux kernel supports only one (default) route
+	
+	if [ -n "$router" ]; then
+		case $NIC_ALIAS in
+		    vpn-primary)
+			# route traffic to vpn-primary host through this interface
+			TARGET_IP=$VPN_PRIMARY
+			;;
+		    vpn-secondary)
+			# route traffic to vpn-secondary host through this interface
+			TARGET_IP=$VPN_SECONDARY
+			;;
+		    *)
+			exit
+			;;
+		esac
+
+		busybox [ "`ip route show $TARGET_IP | wc -l`" -eq 1 ] && ip route delete $TARGET_IP/32
+		busybox ip route add $TARGET_IP/32 via $router dev $interface
+	fi
+
+
+	log info "$1: IP=$ip/$subnet router=$router domain=\"$domain\" dns=\"$dns\" lease=$lease"
+	;;
+
+    deconfig)
+	busybox ip link set $interface up
+	busybox ip -4 addr flush dev $interface
+	busybox ip -4 route flush dev $interface
+	log notice "deconfigured"
+	;;
+
+    leasefail | nak)
+	log err "configuration failed: $1: $message"
+	;;
+
+    *)
+	echo "$0: Unknown udhcpc command: $1" >&2
+	exit 1
+	;;
+esac

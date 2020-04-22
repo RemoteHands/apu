@@ -14,6 +14,7 @@ iface ${NIC_WIRED} inet manual
 auto ${NIC_MOBILE}
 allow-hotplug ${NIC_MOBILE}
 iface ${NIC_MOBILE} inet manual
+    pre-up if [ "`qmicli -d /dev/cdc-wdm0 --uim-get-card-status  | grep -c \"Card state: 'present'\"`" -eq 0 ]; then exit 1; fi
     pre-up ${BASEDIR}/pre-up.sh ${ALIAS_MOBILE} ${NIC_MOBILE}
     pre-up ifconfig ${NIC_MOBILE} down
     pre-up ifconfig wwp0s19u1u3i10 down # only needed if the modem presents two wwan interfaces

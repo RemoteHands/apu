@@ -2,6 +2,7 @@
 export VPN_PRIMARY=
 export VPN_SECONDARY=
 export OPENVPN_PORT=11195
+export OPENVPN_CLIENT_NAME="$HOSTNAME"
 
 # Network Interfaces
 export ALIAS_MOBILE=vpn-primary

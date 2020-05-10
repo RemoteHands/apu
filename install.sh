@@ -2,27 +2,44 @@
 export HOSTNAME=$(cat /etc/hostname)
 SCRIPT_PATH=$(readlink -f "$0")
 export BASEDIR=$(dirname "$SCRIPT_PATH")
+export PATH_PREFIX=$1
 . $BASEDIR/config
 
-#apt-get install -y libqmi-utils udhcpc bird
+if [ "$PATH_PREFIX" = "" ]; then
+    DRY_RUN=0
+    echo "Production 🚨"
+    printf "Press Enter to confirm or Strg + C to cancel"
+    read ok
+else
+    echo "Dry-Run 🚨"
+    DRY_RUN=1
+fi
 
 template() {
-    echo "Configuring $2"
-    perl -p -i -e 's/\$\{([^}]+)\}/defined $ENV{$1} ? $ENV{$1} : $&/eg' < "$BASEDIR/$1" 2> /dev/null > "$2"
+    TARGET_FILE=$PATH_PREFIX$2
+    TARGET_DIR=$(dirname "$TARGET_FILE")
+    echo "Writing $TARGET_FILE"
+    mkdir -p "$TARGET_DIR"
+    OUTPUT=$(perl -p -i -e 's/\$\{([^}]+)\}/defined $ENV{$1} ? $ENV{$1} : $&/eg' < "$BASEDIR/$1" 2> /dev/null)
+    echo "$OUTPUT" > "$TARGET_FILE"
 }
+
+if [ $DRY_RUN -eq 0 ]; then
+    apt-get install -y libqmi-utils udhcpc bird
+fi
 
 template hosts /etc/hosts
 template interfaces /etc/network/interfaces
 template qmi-network.conf /etc/qmi-network.conf
 template bird.conf /etc/bird/bird.conf
 
-if [ ! -d "/etc/openvpn/client" ]; then
+if [ ! -d "$PATH_PREFIX/etc/openvpn/client" ]; then
 	echo "OpenVPN uninitialized. Configuring client credentials keys/ directory"
 	# initial OpenVPN configuration
 	apt-get install -y openvpn
 	mkdir -p /etc/openvpn/client
-	cp "$BASEDIR/credentials/$HOSTNAME.key" "/etc/openvpn/client/"
-	cp "$BASEDIR/credentials/$HOSTNAME.crt" "/etc/openvpn/client/"
+	cp "$BASEDIR/credentials/$OPENVPN_CLIENT_NAME.key" "/etc/openvpn/client/"
+	cp "$BASEDIR/credentials/$OPENVPN_CLIENT_NAME.crt" "/etc/openvpn/client/"
 	cp "$BASEDIR/credentials/ta.key" "/etc/openvpn/client/"
 	cp "$BASEDIR/credentials/ca.crt" "/etc/openvpn/client/"
 
@@ -37,15 +54,16 @@ export OPENVPN_DEV=tap1
 export OPENVPN_HOST=$VPN_SECONDARY
 template openvpn.conf /etc/openvpn/client-secondary.conf
 
-# configure and run services
-systemctl enable openvpn@client-primary
-systemctl enable openvpn@client-secondary
-systemctl start openvpn@client-primary
-systemctl start openvpn@client-secondary
+if [ $DRY_RUN -eq 0 ]; then
+    # configure and run services
+    systemctl enable openvpn@client-primary
+    systemctl enable openvpn@client-secondary
+    systemctl restart openvpn@client-primary
+    systemctl restart openvpn@client-secondary
 
-systemctl enable bird
-systemctl restart bird
+    systemctl enable bird
+    systemctl restart bird
 
-systemctl disable bird6
-systemctl stop bird6
-
+    systemctl disable bird6
+    systemctl stop bird6
+fi    

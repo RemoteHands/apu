@@ -26,3 +26,4 @@ iface ${NIC_MOBILE} inet manual
     pre-down ${BASEDIR}/post-down.sh ${ALIAS_MOBILE} ${NIC_MOBILE}
     post-down /usr/bin/qmi-network /dev/cdc-wdm0 stop
 
+source /etc/network/interfaces.d/*

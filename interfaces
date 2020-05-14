@@ -8,8 +8,10 @@ auto ${NIC_WIRED}
 allow-hotplug ${NIC_WIRED}
 iface ${NIC_WIRED} inet manual
     pre-up ${BASEDIR}/post-down.sh ${ALIAS_WIRED} ${NIC_WIRED}
+    post-up systemctl restart --ignore-dependencies openvpn@client-secondary
     post-up udhcpc -i ${NIC_WIRED} --script=${BASEDIR}/udhcpc.script
     post-down ${BASEDIR}/post-down.sh ${ALIAS_WIRED} ${NIC_WIRED}
+    post-down systemctl stop openvpn@client-secondary
 
 auto ${NIC_MOBILE}
 allow-hotplug ${NIC_MOBILE}
@@ -23,7 +25,9 @@ iface ${NIC_MOBILE} inet manual
     pre-up echo Y > /sys/class/net/${NIC_MOBILE}/qmi/raw_ip
     pre-up /usr/bin/qmi-network /dev/cdc-wdm0 start
     pre-up udhcpc -i ${NIC_MOBILE} --script=${BASEDIR}/udhcpc.script
+    post-up systemctl restart --ignore-dependencies openvpn@client-primary
     pre-down ${BASEDIR}/post-down.sh ${ALIAS_MOBILE} ${NIC_MOBILE}
     post-down /usr/bin/qmi-network /dev/cdc-wdm0 stop
+    post-down systemctl stop openvpn@client-primary
 
 source /etc/network/interfaces.d/*

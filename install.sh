@@ -63,10 +63,8 @@ template openvpn.conf /etc/openvpn/client-secondary.conf
 
 if [ $DRY_RUN -eq 0 ]; then
     # configure and run services
-    systemctl enable openvpn@client-primary
-    systemctl enable openvpn@client-secondary
-    systemctl restart openvpn@client-primary
-    systemctl restart openvpn@client-secondary
+    systemctl disable openvpn@client-primary
+    systemctl disable openvpn@client-secondary
 
     systemctl enable bird
     systemctl restart bird

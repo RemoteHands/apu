@@ -18,5 +18,4 @@ EnvironmentFile=-/etc/default/networking
 ExecStart=/sbin/ifup -a --read-environment
 ExecStop=/sbin/ifdown -a --read-environment --force --exclude=lo
 RemainAfterExit=true
-#TimeoutStartSec=5min
-TimeoutStartSec=30sec
+TimeoutStartSec=45sec

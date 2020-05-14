@@ -1,0 +1,9 @@
+auto enp2s0
+iface enp2s0 inet manual
+  pre-up ip netns add kvm
+  pre-up ip link set enp2s0 netns kvm up
+  post-up ip netns exec kvm ip address add 192.168.1.1/24 dev enp2s0
+  post-up ip netns exec kvm socat UNIX-LISTEN:/var/run/kvm.sock,fork tcp:192.168.1.42:5900 &
+  pre-down ip netns pids kvm | xargs kill -9
+  pre-down ip netns exec kvm ip link set enp2s0 down
+  pre-down ip netns delete kvm

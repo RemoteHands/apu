@@ -25,7 +25,13 @@ template() {
 }
 
 if [ $DRY_RUN -eq 0 ]; then
-    apt-get install -y libqmi-utils udhcpc bird
+    apt-get install -y libqmi-utils udhcpc bird rsync
+fi
+
+# Static Files
+
+if [ $DRY_RUN -eq 0 ]; then
+    rsync -av static/ /
 fi
 
 template hosts /etc/hosts

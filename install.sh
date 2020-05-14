@@ -25,7 +25,7 @@ template() {
 }
 
 if [ $DRY_RUN -eq 0 ]; then
-    apt-get install -y libqmi-utils udhcpc bird rsync
+    apt-get install -y libqmi-utils udhcpc bird rsync netplug
 fi
 
 # Static Files
@@ -36,6 +36,7 @@ fi
 
 template hosts /etc/hosts
 template interfaces /etc/network/interfaces
+template netplugd.conf /etc/netplug/netplugd.conf
 template qmi-network.conf /etc/qmi-network.conf
 template bird.conf /etc/bird/bird.conf
 

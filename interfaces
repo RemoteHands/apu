@@ -23,6 +23,7 @@ iface ${NIC_MOBILE} inet manual
     pre-up for _ in $(seq 1 10); do /usr/bin/test -c /dev/cdc-wdm0 && break; /bin/sleep 1; done
     pre-up for _ in $(seq 1 10); do /usr/bin/qmicli -d /dev/cdc-wdm0 --nas-get-signal-strength && break; /bin/sleep 1; done
     pre-up echo Y > /sys/class/net/${NIC_MOBILE}/qmi/raw_ip
+    pre-up if [ "`/usr/bin/qmi-network /dev/cdc-wdm0 status | grep -c '^Status: disconnected$'`" -eq 1 ]; then /usr/bin/qmi-network /dev/cdc-wdm0 stop; fi
     pre-up /usr/bin/qmi-network /dev/cdc-wdm0 start
     pre-up udhcpc -i ${NIC_MOBILE} --script=${BASEDIR}/udhcpc.script
     post-up systemctl restart --ignore-dependencies openvpn@client-primary

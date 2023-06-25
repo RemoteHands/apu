@@ -1,0 +1,21 @@
+client
+dev ${NIC_VPN_PRIMARY}
+proto udp
+remote ${VPN_PRIMARY} ${OPENVPN_PORT}
+keepalive 10 40
+resolv-retry infinite
+nobind
+user nobody
+group nogroup
+persist-key
+persist-tun
+ca /etc/openvpn/client/ca.crt
+cert /etc/openvpn/client/${OPENVPN_CLIENT_NAME}.crt
+key /etc/openvpn/client/${OPENVPN_CLIENT_NAME}.key
+tls-auth /etc/openvpn/client/ta.key 1
+remote-cert-tls server
+cipher AES-256-CBC
+data-ciphers AES-256-CBC
+verb 3
+status /var/log/openvpn/${NIC_VPN_PRIMARY}.status
+log-append /var/log/openvpn/${NIC_VPN_PRIMARY}.log

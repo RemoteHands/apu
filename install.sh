@@ -15,51 +15,38 @@ else
     DRY_RUN=1
 fi
 
-template() {
-    TARGET_FILE=$PATH_PREFIX$2
-    TARGET_DIR=$(dirname "$TARGET_FILE")
-    echo "Writing $TARGET_FILE"
-    mkdir -p "$TARGET_DIR"
-    OUTPUT=$(perl -p -i -e 's/\$\{([^}]+)\}/defined $ENV{$1} ? $ENV{$1} : $&/eg' < "$BASEDIR/$1" 2> /dev/null)
-    echo "$OUTPUT" > "$TARGET_FILE"
-}
-
 if [ $DRY_RUN -eq 0 ]; then
-    apt-get install -y libqmi-utils udhcpc bird rsync netplug
+    apt-get install -y libqmi-utils udhcpc bird rsync ifplugd socat openvpn
 fi
 
 # Static Files
-
 if [ $DRY_RUN -eq 0 ]; then
-    rsync -av static/ /
+    rsync -av --exclude "*.template" "${BASEDIR}/static/" "${PATH_PREFIX:-/}"
 fi
 
-template hosts /etc/hosts
-template interfaces /etc/network/interfaces
-template netplugd.conf /etc/netplug/netplugd.conf
-template qmi-network.conf /etc/qmi-network.conf
-template bird.conf /etc/bird/bird.conf
+# Templates
+for CURRENT_FILE in $(find "${BASEDIR}/etc" -type f -printf '/etc/%P\n'); do
+    TARGET_FILE="${PATH_PREFIX}${CURRENT_FILE%.template}"
+    TARGET_DIR=$(dirname "$TARGET_FILE")
+    echo "Writing $TARGET_FILE from template"
+    mkdir -p "$TARGET_DIR"
+    envsubst '$VPN_PRIMARY $VPN_SECONDARY $OPENVPN_PORT $OPENVPN_CLIENT_NAME $NIC_MOBILE_A $NIC_MOBILE_B $NIC_WIRED $NIC_VPN_PRIMARY $NIC_VPN_SECONDARY $BIRD_LOCAL_IP $BIRD_REMOTE_IP $APN' \
+      < "${BASEDIR}${CURRENT_FILE}" \
+      > "${TARGET_FILE}"
+done
 
-if [ ! -d "$PATH_PREFIX/etc/openvpn/client" ]; then
+if [ ! -d "${PATH_PREFIX}/etc/openvpn/client" ]; then
 	echo "OpenVPN uninitialized. Configuring client credentials keys/ directory"
 	# initial OpenVPN configuration
-	apt-get install -y openvpn
-	mkdir -p /etc/openvpn/client
-	cp "$BASEDIR/credentials/$OPENVPN_CLIENT_NAME.key" "/etc/openvpn/client/"
-	cp "$BASEDIR/credentials/$OPENVPN_CLIENT_NAME.crt" "/etc/openvpn/client/"
-	cp "$BASEDIR/credentials/ta.key" "/etc/openvpn/client/"
-	cp "$BASEDIR/credentials/ca.crt" "/etc/openvpn/client/"
+	mkdir -p "${PATH_PREFIX}/etc/openvpn/client/"
+	cp "${BASEDIR}/credentials/${OPENVPN_CLIENT_NAME}.key" "${PATH_PREFIX}/etc/openvpn/client/"
+	cp "${BASEDIR}/credentials/${OPENVPN_CLIENT_NAME}.crt" "${PATH_PREFIX}/etc/openvpn/client/"
+	cp "${BASEDIR}/credentials/ta.key" "${PATH_PREFIX}/etc/openvpn/client/"
+	cp "${BASEDIR}/credentials/ca.crt" "${PATH_PREFIX}/etc/openvpn/client/"
 
-	chown -R root:root /etc/openvpn/client
-	chmod -R 550 /etc/openvpn/client
-fi	
-
-export OPENVPN_DEV=tap0
-export OPENVPN_HOST=$VPN_PRIMARY
-template openvpn.conf /etc/openvpn/client-primary.conf
-export OPENVPN_DEV=tap1
-export OPENVPN_HOST=$VPN_SECONDARY
-template openvpn.conf /etc/openvpn/client-secondary.conf
+	chown -R root:root "${PATH_PREFIX}/etc/openvpn/client"
+	chmod -R 550 "${PATH_PREFIX}/etc/openvpn/client"
+fi
 
 if [ $DRY_RUN -eq 0 ]; then
     # configure and run services

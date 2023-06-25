@@ -1,7 +1,7 @@
 client
-dev ${OPENVPN_DEV}
+dev ${NIC_VPN_SECONDARY}
 proto udp
-remote ${OPENVPN_HOST} ${OPENVPN_PORT}
+remote ${VPN_SECONDARY} ${OPENVPN_PORT}
 keepalive 10 40
 resolv-retry infinite
 nobind
@@ -15,7 +15,7 @@ key /etc/openvpn/client/${OPENVPN_CLIENT_NAME}.key
 tls-auth /etc/openvpn/client/ta.key 1
 remote-cert-tls server
 cipher AES-256-CBC
+data-ciphers AES-256-CBC
 verb 3
-status /var/log/openvpn/${OPENVPN_DEV}.status
-log-append /var/log/openvpn/${OPENVPN_DEV}.log
-
+status /var/log/openvpn/${NIC_VPN_SECONDARY}.status
+log-append /var/log/openvpn/${NIC_VPN_SECONDARY}.log

@@ -8,4 +8,3 @@ ff02::2 ip6-allrouters
 
 ${VPN_PRIMARY} vpn-primary
 ${VPN_SECONDARY} vpn-secondary
-

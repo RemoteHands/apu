@@ -37,8 +37,8 @@ case $1 in
 			;;
 		esac
 
-		busybox [ "`ip route show $TARGET_IP | wc -l`" -eq 1 ] && ip route delete $TARGET_IP/32
-		busybox ip route add $TARGET_IP/32 via $router dev $interface
+		busybox [ "`ip route show $TARGET_IP | wc -l`" -ne 0 ] && ip route delete "$TARGET_IP/32"
+		busybox ip route add "$TARGET_IP/32" via "$router" dev "$interface"
 	fi
 
 

@@ -1,0 +1,50 @@
+auto lo lo:1
+iface lo inet loopback
+
+iface lo:1 inet static
+  address ${BIRD_LOCAL_IP}/32
+  # blackhole both VPN servers by default
+  #post-up route add blackhole ${VPN_PRIMARY}
+  #post-up route add blackhole ${VPN_SECONDARY}
+
+#auto ${NIC_WIRED}
+allow-hotplug ${NIC_WIRED}
+iface ${NIC_WIRED} inet manual
+    pre-up ip link set alias vpn-secondary dev ${NIC_WIRED}
+    pre-up if [ $(ip route show "${VPN_SECONDARY}/32" | wc -l) -ne 0 ]; then ip route delete "${VPN_SECONDARY}/32"; fi
+    pre-up ip route add blackhole "${VPN_SECONDARY}/32"
+    # blackhole other VPN route if none exists
+    pre-up if [ $(ip route show $VPN_PRIMARY | wc -l) -eq 0 ]; then ip route add blackhole "${VPN_PRIMARY}/32"; fi
+    up udhcpc -i ${NIC_WIRED} --script=/etc/udhcpc/vpn.script
+    post-up systemctl restart --ignore-dependencies openvpn@client-secondary
+    pre-down ip route delete "${VPN_SECONDARY}/32" || true
+    pre-down if [ $(ip route show "${VPN_SECONDARY}/32" | wc -l) -ne 0 ]; then ip route delete "${VPN_SECONDARY}/32"; fi
+    pre-down ip route add blackhole "${VPN_SECONDARY}"
+    post-down systemctl stop openvpn@client-secondary
+
+#auto ${NIC_MOBILE_A}
+allow-hotplug ${NIC_MOBILE_A}
+iface ${NIC_MOBILE_A} inet manual
+    pre-up ip link set alias vpn-primary dev ${NIC_MOBILE_A}
+    pre-up if [ "`qmicli -d /dev/cdc-wdm0 --uim-get-card-status  | grep -c \"Card state: 'present'\"`" -eq 0 ]; then exit 1; fi
+    pre-up if [ $(ip route show "${VPN_PRIMARY}/32" | wc -l) -ne 0 ]; then ip route delete "${VPN_PRIMARY}/32"; fi
+    pre-up ip route add blackhole "${VPN_PRIMARY}/32"
+    # blackhole other VPN route if none exists
+    pre-up if [ $(ip route show "${SECONDARY}/32" | wc -l) -eq 0 ]; then ip route add blackhole "${SECONDARY}/32"; fi
+    pre-up ip link set down dev "${NIC_MOBILE_A}"
+    pre-up ip link set down dev "${NIC_MOBILE_B}" # only needed if the modem presents two wwan interfaces
+    # wait for modem
+    pre-up for _ in $(seq 1 10); do /usr/bin/test -c /dev/cdc-wdm0 && break; /bin/sleep 1; done
+    # wait for signal
+    pre-up for _ in $(seq 1 60); do /usr/bin/qmicli -d /dev/cdc-wdm0 --nas-get-signal-strength && break; /bin/sleep 1; done
+    pre-up echo Y > /sys/class/net/${NIC_MOBILE_A}/qmi/raw_ip
+    pre-up if [ "`/usr/bin/qmi-network /dev/cdc-wdm0 status | grep -c '^Status: disconnected$'`" -eq 1 ]; then /usr/bin/qmi-network /dev/cdc-wdm0 stop; fi
+    pre-up /usr/bin/qmi-network /dev/cdc-wdm0 start
+    up udhcpc -i ${NIC_MOBILE_A} --script=/etc/udhcpc/vpn.script
+    post-up systemctl restart --ignore-dependencies openvpn@client-primary
+    pre-down if [ $(ip route show "${VPN_PRIMARY}/32" | wc -l) -ne 0 ]; then ip route delete "${VPN_PRIMARY}/32"; fi
+    pre-down ip route add blackhole "${VPN_PRIMARY}/32"
+    post-down /usr/bin/qmi-network /dev/cdc-wdm0 stop
+    post-down systemctl stop openvpn@client-primary
+
+source /etc/network/interfaces.d/*
